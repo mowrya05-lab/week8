@@ -1,0 +1,146 @@
+
+import java.util.*;
+import java.util.regex.*;
+
+abstract class Question {
+    protected String questionText;
+    protected String correctAnswer;
+    protected String studentAnswer;
+    protected double points;
+
+    Question(String questionText, String correctAnswer,
+             String studentAnswer, double points) {
+        this.questionText = questionText;
+        this.correctAnswer = correctAnswer;
+        this.studentAnswer = studentAnswer;
+        this.points = points;
+    }
+
+    abstract double grade();
+
+    abstract String getType();
+}
+
+class MCQ extends Question {
+    MCQ(String q, String c, String s, double p) {
+        super(q, c, s, p);
+    }
+
+    double grade() {
+        return studentAnswer.equals(correctAnswer) ? points : 0;
+    }
+
+    String getType() {
+        return "MCQ";
+    }
+}
+
+class TF extends Question {
+    TF(String q, String c, String s, double p) {
+        super(q, c, s, p);
+    }
+
+    double grade() {
+        return studentAnswer.equals(correctAnswer) ? points : 0;
+    }
+
+    String getType() {
+        return "TF";
+    }
+}
+
+class Essay extends Question {
+    Essay(String q, String c, String s, double p) {
+        super(q, c, s, p);
+    }
+
+    double grade() {
+        String[] keywords = correctAnswer.split(",");
+        int matched = 0;
+
+        String answer = studentAnswer.toLowerCase();
+
+        for (String keyword : keywords) {
+            String word = keyword.trim().toLowerCase();
+
+            if (!word.isEmpty() &&
+                Pattern.compile("\\b" + Pattern.quote(word) + "\\b")
+                       .matcher(answer).find()) {
+                matched++;
+            }
+        }
+
+        if (matched >= 2) {
+            return points * 0.75;
+        } else if (matched == 1) {
+            return points * 0.50;
+        }
+
+        return 0;
+    }
+
+    String getType() {
+        return "ESSAY";
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = Integer.parseInt(sc.nextLine().trim());
+
+        Question[] questions = new Question[n];
+        double total = 0;
+
+        for (int i = 0; i < n; i++) {
+            String line = sc.nextLine();
+            Matcher matcher = Pattern.compile(
+                "\"([^\"]*)\"|(\\S+)"
+            ).matcher(line);
+
+            ArrayList<String> tokens = new ArrayList<>();
+
+            while (matcher.find()) {
+                if (matcher.group(1) != null) {
+                    tokens.add(matcher.group(1));
+                } else {
+                    tokens.add(matcher.group(2));
+                }
+            }
+
+            String type = tokens.get(0).toUpperCase();
+            String q = tokens.get(1);
+            String correct = tokens.get(2);
+            String student = tokens.get(3);
+            double points = Double.parseDouble(tokens.get(4));
+
+            switch (type) {
+                case "MCQ":
+                    questions[i] =
+                        new MCQ(q, correct, student, points);
+                    break;
+                case "TF":
+                    questions[i] =
+                        new TF(q, correct, student, points);
+                    break;
+                case "ESSAY":
+                    questions[i] =
+                        new Essay(q, correct, student, points);
+                    break;
+                default:
+                    throw new IllegalArgumentException(
+                        "Invalid question type");
+            }
+        }
+
+        for (Question q : questions) {
+            double score = q.grade();
+            System.out.printf("%s: %.2f%n",
+                q.getType(), score);
+            total += score;
+        }
+
+        System.out.printf("Total Score: %.2f%n", total);
+        sc.close();
+    }
+}
